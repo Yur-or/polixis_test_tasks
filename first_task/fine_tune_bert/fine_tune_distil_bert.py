@@ -3,6 +3,7 @@ from typing import Tuple
 import argparse
 import datetime
 import logging
+import logging.config
 import random
 import time
 import os
@@ -23,44 +24,52 @@ def init_logger() -> None:
     global log
 
     with open('first_task/fine_tune_bert/logging_conf.yaml', 'r') as stream:
-        config = yaml.load(stream, Loader=yaml.FullLoader)
-        logging.config.dictConfig(config)
+        config_ = yaml.load(stream, Loader=yaml.FullLoader)
+        logging.config.dictConfig(config_)
         log = logging.getLogger('Main')
 
 
 @dataclass
 class TrainArguments:
-    model_name: str = None
-    path_to_dataset: str = None
-    output_dir: str = None
-    train_prosentage: int = None
-    valid_prosentage: int = None
-    test_prosentage: int = None
-    seed: int = None
-    num_train_epochs: int = None
-    learning_rate: float = None
-    epsilon: float = None
-    warmup_steps: int = None
-    batch_size: int = None
-    max_seq_length: int = None
+    model_name: str
+    path_to_dataset: str
+    output_dir: str
+    train_prosentage: int
+    valid_prosentage: int
+    test_prosentage: int
+    seed: int
+    num_train_epochs: int
+    learning_rate: float
+    epsilon: float
+    warmup_steps: int
+    batch_size: int
+    max_seq_length: int
 
 
 def parse_arguments() -> dict:
     parser = argparse.ArgumentParser(description='Argumetns for training')
 
     parser.add_argument('--model_name', default=None, required=True, type=str)
-    parser.add_argument('--path_to_dataset', default=None, required=True, type=str)
+    parser.add_argument('--path_to_dataset', default=None,
+                        required=True, type=str)
     parser.add_argument('--output_dir', default=None, required=True, type=str)
-    parser.add_argument('--train_prosentage', default=None, required=True, type=int)
-    parser.add_argument('--valid_prosentage', default=None, required=True, type=int)
-    parser.add_argument('--test_prosentage', default=None, required=True, type=int)
+    parser.add_argument('--train_prosentage', default=None,
+                        required=True, type=int)
+    parser.add_argument('--valid_prosentage', default=None,
+                        required=True, type=int)
+    parser.add_argument('--test_prosentage', default=None,
+                        required=True, type=int)
     parser.add_argument('--seed', default=None, required=True, type=int)
-    parser.add_argument('--num_train_epochs', default=None, required=True, type=int)
-    parser.add_argument('--learning_rate', default=None, required=True, type=float)
+    parser.add_argument('--num_train_epochs', default=None,
+                        required=True, type=int)
+    parser.add_argument('--learning_rate', default=None,
+                        required=True, type=float)
     parser.add_argument('--epsilon', default=None, required=True, type=float)
-    parser.add_argument('--warmup_steps', default=None, required=True, type=int)
+    parser.add_argument('--warmup_steps', default=None,
+                        required=True, type=int)
     parser.add_argument('--batch_size', default=None, required=True, type=int)
-    parser.add_argument('--max_seq_length', default=None, required=True, type=int)
+    parser.add_argument('--max_seq_length', default=None,
+                        required=True, type=int)
 
     args = from_dict(data_class=TrainArguments, data=vars(parser.parse_args()))
 
@@ -71,12 +80,12 @@ def parse_arguments() -> dict:
 
 def init_wandb(lr: float, count_epochs) -> None:
     wandb.init(
-        project='polixis_test_task', 
+        project='polixis_test_task',
         name='fine_tune_distil_bert',
         config={
-        'learning_rate': lr,
-        'architecture': 'BertForSequenceClassification',
-        'epochs': count_epochs
+            'learning_rate': lr,
+            'architecture': 'BertForSequenceClassification',
+            'epochs': count_epochs
         }
     )
 
@@ -84,7 +93,7 @@ def init_wandb(lr: float, count_epochs) -> None:
 def check_gpu_and_init_device() -> None:
     global device
 
-    if torch.cuda.is_available():    
+    if torch.cuda.is_available():
 
         device = torch.device('cuda')
         log.info(f'There are {torch.cuda.device_count()} GPU(s) available.')
@@ -122,16 +131,16 @@ def tokenize_and_create_TensorDataset(texts: pd.Series, labels: pd.Series, token
 
     for text in texts:
         encoded_dict = tokenizer.encode_plus(
-                            text,  
-                            add_special_tokens = True,
-                            max_length = 512,
-                            pad_to_max_length = True,
-                            return_attention_mask = True,
-                            return_tensors = 'pt',
-                    )
-        
+            text,
+            add_special_tokens=True,
+            max_length=512,
+            pad_to_max_length=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+
         input_ids.append(encoded_dict['input_ids'])
-        
+
         attention_masks.append(encoded_dict['attention_mask'])
 
     input_ids = torch.cat(input_ids, dim=0)
@@ -152,40 +161,70 @@ class SplitPercentage:
             raise Exception('Sum percentages must be equal 100')
 
 
-def split_data_and_create_DataLoaders(dataset: TensorDataset, split_prosentage: SplitPercentage, batch_size: int, seed: int) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    fist_spliter = StratifiedShuffleSplit(n_splits=1, train_size=split_prosentage.train_percentage/100, random_state=seed)
-    train_indexes, val_test_indexes = next(fist_spliter.split(dataset, dataset[:][2]))
+def split_data_and_create_DataLoaders(
+    dataset: TensorDataset,
+    split_prosentage: SplitPercentage,
+    batch_size: int,
+    seed: int
+) -> Tuple[DataLoader, DataLoader, DataLoader]:
+
+    fist_spliter = StratifiedShuffleSplit(
+        n_splits=1,
+        train_size=split_prosentage.train_percentage/100,
+        random_state=seed
+    )
+
+    train_indexes, val_test_indexes = next(
+        fist_spliter.split(dataset, dataset[:][2])
+    )
     train_dataset = Subset(dataset, train_indexes)
     val_test_dataset = Subset(dataset, val_test_indexes)
-    
-    second_spliter = StratifiedShuffleSplit(n_splits=1, train_size=split_prosentage.valid_percentage/(split_prosentage.valid_percentage + split_prosentage.test_percentage), random_state=seed)
-    val_indexes, test_indexes = next(second_spliter.split(val_test_dataset, val_test_dataset[:][2]))
+
+    second_spliter = StratifiedShuffleSplit(
+        n_splits=1,
+        train_size=split_prosentage.valid_percentage /
+        (split_prosentage.valid_percentage + split_prosentage.test_percentage),
+        random_state=seed
+    )
+
+    val_indexes, test_indexes = next(
+        second_spliter.split(val_test_dataset, val_test_dataset[:][2])
+    )
+
     val_dataset = Subset(val_test_dataset, val_indexes)
     test_dataset = Subset(val_test_dataset, test_indexes)
 
     train_dataloader = DataLoader(
-            train_dataset,
-            sampler = RandomSampler(train_dataset),
-            batch_size = batch_size
-        )
+        train_dataset,
+        sampler=RandomSampler(train_dataset),
+        batch_size=batch_size
+    )
 
     valid_dataloader = DataLoader(
-            val_dataset,
-            sampler = SequentialSampler(val_dataset),
-            batch_size = batch_size
-        )
-    
+        val_dataset,
+        sampler=SequentialSampler(val_dataset),
+        batch_size=batch_size
+    )
+
     test_dataloader = DataLoader(
-            test_dataset,
-            sampler = SequentialSampler(test_dataset),
-            batch_size = batch_size
-        )
-    
+        test_dataset,
+        sampler=SequentialSampler(test_dataset),
+        batch_size=batch_size
+    )
+
     return train_dataloader, valid_dataloader, test_dataloader
 
 
-def train(model: BertForSequenceClassification, train_dataloader: DataLoader, valid_dataloader: DataLoader, epochs: int, scheduler: torch.optim.lr_scheduler.LambdaLR, optimizer: AdamW, seed: int) -> BertForSequenceClassification:
-    
+def train(
+    model: BertForSequenceClassification,
+    train_dataloader: DataLoader,
+    valid_dataloader: DataLoader,
+    epochs: int,
+    scheduler: torch.optim.lr_scheduler.LambdaLR,
+    optimizer: AdamW,
+    seed: int
+) -> BertForSequenceClassification:
+
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -194,7 +233,7 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
     total_t0 = time.perf_counter()
 
     for epoch_i in range(1, epochs + 1):
-        
+
         log.info(f'======== Epoch {epoch_i} / {epochs} ========')
         log.info('Training...')
 
@@ -208,7 +247,8 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
 
             if step % 40 == 0 and not step == 0:
                 elapsed = format_time(time.perf_counter() - t0)
-                log.info(f' Batch {step} of {len(train_dataloader)}. Elapsed: {elapsed}.')
+                log.info(
+                    f' Batch {step} of {len(train_dataloader)}. Elapsed: {elapsed}.')
                 log.info(f'Current learning rate {scheduler.get_lr()}')
                 wandb.log({'lr': scheduler.get_lr()})
 
@@ -216,13 +256,13 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
             b_input_mask = batch[1].to(device)
             b_labels = batch[2].to(device)
 
-            model.zero_grad()        
+            model.zero_grad()
 
-            result = model(b_input_ids, 
-                        token_type_ids=None, 
-                        attention_mask=b_input_mask, 
-                        labels=b_labels,
-                        return_dict=True)
+            result = model(b_input_ids,
+                           token_type_ids=None,
+                           attention_mask=b_input_mask,
+                           labels=b_labels,
+                           return_dict=True)
 
             loss = result.loss
 
@@ -238,14 +278,14 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
             log.info(f'Train loss: {loss:.3f}')
             wandb.log({'train_loss': loss})
 
-        avg_train_loss = total_train_loss / len(train_dataloader)            
-        
+        avg_train_loss = total_train_loss / len(train_dataloader)
+
         training_time = format_time(time.perf_counter() - t0)
 
         log.info(f' Average training loss: {avg_train_loss:.3f}')
         log.info(f' Training epcoh took: {training_time}')
-            
-        #Validation
+
+        # Validation
 
         log.info('Running Validation...')
 
@@ -257,27 +297,27 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
         total_eval_loss = 0
 
         for batch in valid_dataloader:
-            
+
             b_input_ids = batch[0].to(device)
             b_input_mask = batch[1].to(device)
             b_labels = batch[2].to(device)
-            
-            with torch.no_grad():        
 
-                result = model(b_input_ids, 
-                            token_type_ids=None, 
-                            attention_mask=b_input_mask,
-                            labels=b_labels,
-                            return_dict=True)
+            with torch.no_grad():
+
+                result = model(b_input_ids,
+                               token_type_ids=None,
+                               attention_mask=b_input_mask,
+                               labels=b_labels,
+                               return_dict=True)
 
             loss = result.loss
-                
+
             total_eval_loss += loss.item()
 
         avg_val_loss = total_eval_loss / len(valid_dataloader)
-        
+
         validation_time = format_time(time.perf_counter() - t0)
-        
+
         log.info(f' Validation Loss: {avg_val_loss:.3f}')
         log.info(f' Validation took: {validation_time}')
 
@@ -289,36 +329,41 @@ def train(model: BertForSequenceClassification, train_dataloader: DataLoader, va
         })
 
     log.info('Training complete!')
-    log.info(f'Total training took {format_time(time.perf_counter()-total_t0)} (h:mm:ss)')
+    log.info(
+        f'Total training took {format_time(time.perf_counter()-total_t0)} (h:mm:ss)')
 
     return model
 
 
-def evalute_test(model: BertForSequenceClassification, prediction_dataloader: DataLoader) -> None:
+def evalute_test(
+    model: BertForSequenceClassification,
+    prediction_dataloader: DataLoader
+) -> None:
 
-    log.info(f'Predicting labels for {len(prediction_dataloader.dataset)} test sentences...')
+    log.info(
+        f'Predicting labels for {len(prediction_dataloader.dataset)} test sentences...')
 
     model.eval()
 
     predictions, true_labels = [], []
 
     for batch in prediction_dataloader:
-        
+
         batch = tuple(t.to(device) for t in batch)
-        
+
         b_input_ids, b_input_mask, b_labels = batch
-        
+
         with torch.no_grad():
-            result = model(b_input_ids, 
-                            token_type_ids=None, 
-                            attention_mask=b_input_mask,
-                            return_dict=True)
+            result = model(b_input_ids,
+                           token_type_ids=None,
+                           attention_mask=b_input_mask,
+                           return_dict=True)
 
         logits = result.logits
 
         logits = logits.detach().cpu().numpy()
         label_ids = b_labels.to('cpu').numpy()
-        
+
         predictions.append(logits)
         true_labels.append(label_ids)
 
@@ -348,23 +393,31 @@ class SetMetrics:
     mcc: float = None
 
 
-def calculation_metrics(predictions: np.array, true_labels: np.array) -> SetMetrics:
+def calculation_metrics(
+    predictions: np.array,
+    true_labels: np.array
+) -> SetMetrics:
 
     flat_predictions = np.concatenate(predictions, axis=0)
     flat_predictions = np.argmax(flat_predictions, axis=1).flatten()
     flat_true_labels = np.concatenate(true_labels, axis=0)
 
     metrics = SetMetrics(
-        accuracy = accuracy_score(flat_true_labels, flat_predictions),
-        f1_macro = f1_score(flat_true_labels, flat_predictions, average='macro'),
-        f1_micro = f1_score(flat_true_labels, flat_predictions, average='micro'),
-        mcc = matthews_corrcoef(flat_true_labels, flat_predictions),
+        accuracy=accuracy_score(flat_true_labels, flat_predictions),
+        f1_macro=f1_score(flat_true_labels, flat_predictions, average='macro'),
+        f1_micro=f1_score(flat_true_labels, flat_predictions, average='micro'),
+        mcc=matthews_corrcoef(flat_true_labels, flat_predictions),
     )
 
-    return  metrics
+    return metrics
 
 
-def save_trained_model(model: BertForSequenceClassification, output_dir: os.PathLike, tokenizer: AutoTokenizer) -> None:
+def save_trained_model(
+    model: BertForSequenceClassification,
+    output_dir: os.PathLike,
+    tokenizer: AutoTokenizer
+) -> None:
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -376,7 +429,7 @@ def save_trained_model(model: BertForSequenceClassification, output_dir: os.Path
 
 
 def main():
-    
+
     init_logger()
     args = parse_arguments()
     init_wandb(args.learning_rate, args.num_train_epochs)
@@ -385,33 +438,37 @@ def main():
     df = get_and_preprocess_data(args.path_to_dataset)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    dataset = tokenize_and_create_TensorDataset(df['text'], df['cls'], tokenizer)
+    dataset = tokenize_and_create_TensorDataset(
+        df['text'], df['cls'], tokenizer)
 
-    split_prosentage = SplitPercentage(args.train_prosentage, args.valid_prosentage, args.test_prosentage)
+    split_prosentage = SplitPercentage(
+        args.train_prosentage, args.valid_prosentage, args.test_prosentage)
 
-    train_dataloader, valid_dataloader, test_dataloader = split_data_and_create_DataLoaders(dataset, split_prosentage, args.batch_size, args.seed)
+    train_dataloader, valid_dataloader, test_dataloader = split_data_and_create_DataLoaders(
+        dataset, split_prosentage, args.batch_size, args.seed)
 
     model = BertForSequenceClassification.from_pretrained(
         args.model_name,
-        num_labels = 4,
-        output_attentions = False,
-        output_hidden_states = False,
+        num_labels=4,
+        output_attentions=False,
+        output_hidden_states=False,
     )
 
     model.to(device)
 
     optimizer = AdamW(model.parameters(),
-                  lr = args.learning_rate,
-                  eps = args.epsilon
-    )
+                      lr=args.learning_rate,
+                      eps=args.epsilon
+                      )
 
     total_steps = len(train_dataloader) * args.num_train_epochs
-    scheduler = get_linear_schedule_with_warmup(optimizer, 
-                                                num_warmup_steps = args.warmup_steps,
-                                                num_training_steps = total_steps
-    )
+    scheduler = get_linear_schedule_with_warmup(optimizer,
+                                                num_warmup_steps=args.warmup_steps,
+                                                num_training_steps=total_steps
+                                                )
 
-    trained_model = train(model, train_dataloader, valid_dataloader, args.num_train_epochs, scheduler, optimizer, args.seed)
+    trained_model = train(model, train_dataloader, valid_dataloader,
+                          args.num_train_epochs, scheduler, optimizer, args.seed)
 
     evalute_test(trained_model, test_dataloader)
 

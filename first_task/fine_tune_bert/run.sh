@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # pretrained model
-export model_name='distilbert-base-uncased'
+export model_name='sentence-transformers/bert-base-nli-cls-token'
 
 # path to dataset for training/finetune
-export path_to_dataset='first_task/data/train.scv'
+export path_to_dataset='first_task/data/train.csv'
 
 # output settings
-export output_dir="first_task/fine_tune_bert/outputs/"
+export output_dir="first_task/fine_tune_bert/outputs_sbert/"
 
 # misc. settings
 export seed=19
@@ -30,7 +30,7 @@ export valid_prosentage=10
 export test_prosentage=10
 
 
-python first_task/fine_tune_bert/fine_tune_distil_bert.py \
+python3 first_task/fine_tune_bert/fine_tune_distil_bert.py \
     --model_name $model_name \
     --path_to_dataset $path_to_dataset \
     --output_dir $output_dir \

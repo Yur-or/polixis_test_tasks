@@ -3,6 +3,6 @@ torch
 sklearn
 pandas
 numpy
-yaml
+pyyaml
 wandb
 dacite
