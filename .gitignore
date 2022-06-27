@@ -1,12 +1,10 @@
 .DS_Store
-first_task/.ipynb_checkpoints
+.vscode
 *.log
 *.ipynb
-first_try.py
-wandb
-*.csv
-.vscode
 outputs*
 test*
+first_task/.ipynb_checkpoints
 first_task/API_inference/__pycache__
 first_task/data
+wandb
