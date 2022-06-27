@@ -70,18 +70,17 @@ def main():
     
     csv_as_ls_rows = read_csv_as_list_rows(path_to_csv)
 
-    start_time = time.time()
-    for i in range(1000000):
+    start_time = time.perf_counter()
+    for _ in range(100000):
         first_lang_first_lang_pairs_v1, first_lang_second_lang_pairs_v1 = pairs_extractor_v1(csv_as_ls_rows, delimiters)
-    print(f'Avg time to process by version 1: {(time.time() - start_time) / 1000000}')
+    print(f'Avg time to process by version 1: {(time.perf_counter() - start_time) / 100000}')
 
-    start_time = time.time()
-    for i in range(1000000):
+    start_time = time.perf_counter()
+    for _ in range(100000):
         first_lang_first_lang_pairs_v2, first_lang_second_lang_pairs_v2 = pairs_extractor_v2(csv_as_ls_rows, delimiters)
-    print(f'Avg time to process by version 2: {(time.time() - start_time) / 1000000}')
+    print(f'Avg time to process by version 2: {(time.perf_counter() - start_time) / 100000}')
 
     print(f'Versions 1 and 2 given equal results: {first_lang_first_lang_pairs_v1 == first_lang_first_lang_pairs_v2} {first_lang_second_lang_pairs_v1 == first_lang_second_lang_pairs_v2}')
-
 
     # with open('outputs/first_lang_first_lang_pairs.json', 'w', encoding='utf-8') as f:
     #     json.dump(first_lang_first_lang_pairs_v2, f, ensure_ascii=False, indent=4)

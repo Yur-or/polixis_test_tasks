@@ -1,3 +1,6 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: osx-64
 transformers
 torch
 sklearn
@@ -6,3 +9,5 @@ numpy
 pyyaml
 wandb
 dacite
+fastapi
+uvicorn
